@@ -16,6 +16,12 @@ npm run build            # production build in dist/
 
 Geolocation needs HTTPS, except on `localhost`. To test on your phone, deploy `dist/` (Cloudflare Pages, Netlify or Vercel all work and are free at this scale).
 
+### GitHub Pages
+
+The GitHub Actions workflow builds and deploys this project to `https://<username>.github.io/pocketpick/` whenever you push to `main`. In the repository settings, set **Pages → Build and deployment → Source** to **GitHub Actions**. The project base path is configured for the `pocketpick` repository.
+
+To enable Google Maps and shop search in the deployed app, add a repository Actions secret named `VITE_GOOGLE_MAPS_API_KEY` and pass it to the build workflow. Restrict the key to your Pages domain.
+
 ## Google setup (about 10 minutes)
 
 1. Create a project in Google Cloud Console and attach billing (the free monthly allowance covers personal use, but check current limits).
