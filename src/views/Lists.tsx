@@ -59,7 +59,7 @@ export function Lists({ go }: { go: (h: string) => void }) {
         </div>
       </div>
 
-      <h1 className="title hand">Buy it while<br />you're there</h1>
+      <h1 className="title hand">Pick my<br />pocket !</h1>
 
       {lists === undefined ? null : lists.length === 0 ? (
         <div className="empty sk">
