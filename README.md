@@ -43,6 +43,14 @@ To enable Google Maps and shop search in the deployed app, add a repository Acti
 
 **Navigation.** The "Walk to…" button opens a Google Maps directions URL with the place id. The Maps JS API cannot do turn-by-turn itself, so Google Maps does it.
 
+## Trips, maps, and importing
+
+- Each trip has a map showing the places attached to its items. Set its **Home** by searching for a place or dropping a pin on the map; the map centers there.
+- Add an individual shop with Places autocomplete, paste a full Google Maps URL into an item, or search for a chain directly and select branches to include.
+- On a trip, choose **Import Maps links** to paste one full Google Maps URL per line. Each resolved place is added as an item. Shortened `maps.app.goo.gl` links must first be opened in Google Maps and copied as a full URL.
+- Choose **Export trip CSV** to download a spreadsheet-friendly export of that trip's items, assigned places, and Maps links. The separate JSON backup continues to include all trips and app data.
+- On an item's place list, **Open this place in Google Maps** opens a saved individual place; chain-wide branches use the trip's directions action.
+
 ## Limits worth knowing
 
 - **Back up your data.** Safari can clear site data after about a week of non-use unless the app is added to the home screen. Use *Export backup* on the first screen.

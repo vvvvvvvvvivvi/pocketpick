@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db'
-import { buildIndex, candidates, fmtDist, navUrl, useGeo, walkMins } from '../geo'
+import { buildIndex, candidates, fmtDist, mapsPlaceUrl, navUrl, useGeo, walkMins } from '../geo'
 import { STALE_MS, refreshPlace } from '../gmaps'
 import { Icon } from '../components/Sprite'
 import { SketchIcon } from '../components/Sketch'
@@ -65,8 +65,8 @@ export function ItemView({ itemId, edit }: { itemId: string; edit: (itemId: stri
       {cands.length === 0 ? (
         <div className="empty sk">
           <span className="tape" />
-          <p className="hand">No store pinned yet.</p>
-          <p>Edit this item and search for a shop.</p>
+          <p className="hand">No store pinned yet !!</p>
+          <p>Edit this item and search for a shop (!)</p>
         </div>
       ) : (
         <>
@@ -76,7 +76,7 @@ export function ItemView({ itemId, edit }: { itemId: string; edit: (itemId: stri
             {cands.map((c, i) => {
               const on = c.place.id === sel?.place.id
               return (
-                <li key={c.place.id}>
+                <li key={c.place.id} className="place-entry">
                   <button className={'place sk fine' + (on ? ' sel' : '')} aria-pressed={on} onClick={() => setPicked(c.place.id)}>
                     <span className="no sk fine hand">{i + 1}</span>
                     <span>
@@ -85,6 +85,11 @@ export function ItemView({ itemId, edit }: { itemId: string; edit: (itemId: stri
                     </span>
                     {c.dist != null && <span className="dist"><b>{fmtDist(c.dist)}</b><small>{walkMins(c.dist)}</small></span>}
                   </button>
+                  {!c.via && (
+                    <a className="place-map-link" href={mapsPlaceUrl(c.place)} target="_blank" rel="noopener noreferrer">
+                      Open this place in Google Maps
+                    </a>
+                  )}
                 </li>
               )
             })}

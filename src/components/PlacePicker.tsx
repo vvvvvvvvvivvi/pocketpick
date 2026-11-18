@@ -3,7 +3,11 @@ import { loadMaps, placeFromPrediction } from '../gmaps'
 import type { LatLng, Place } from '../types'
 
 /** Google's own autocomplete widget (Places API New). Picking a result gives us id, name and coordinates. */
-export function PlacePicker({ near, onPick }: { near: LatLng | null; onPick: (p: Place) => void }) {
+export function PlacePicker({ near, onPick, placeholder = 'Search for a shop or address' }: {
+  near: LatLng | null
+  onPick: (p: Place) => void
+  placeholder?: string
+}) {
   const host = useRef<HTMLDivElement>(null)
   const [error, setError] = useState('')
   const pickRef = useRef(onPick)
@@ -19,7 +23,7 @@ export function PlacePicker({ near, onPick }: { near: LatLng | null; onPick: (p:
         el = new PlaceAutocompleteElement({})
         if (near) el.locationBias = { center: near, radius: 50000 }
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        ;(el as any).placeholder = 'Search for a shop or address'
+        ;(el as any).placeholder = placeholder
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         el.addEventListener('gmp-select', async (e: any) => {
           try {

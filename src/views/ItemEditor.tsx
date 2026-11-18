@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
+import { useLiveQuery } from 'dexie-react-hooks'
 import { db, uid } from '../db'
 import { useGeo } from '../geo'
-import { searchBranches } from '../gmaps'
+import { resolveMapsLink, searchBranches } from '../gmaps'
 import { Icon } from '../components/Sprite'
 import { SketchPad } from '../components/Sketch'
 import { PlacePicker } from '../components/PlacePicker'
@@ -18,13 +19,16 @@ export function ItemEditor({ listId, itemId, onClose }: { listId: string; itemId
   const [sketch, setSketch] = useState<Sketch | undefined>()
   const [places, setPlaces] = useState<Place[]>([])
   const [scopes, setScopes] = useState<BrandScope[]>([])
-  const [pending, setPending] = useState<Place | null>(null)
-  const [brandName, setBrandName] = useState('')
+  const [chainName, setChainName] = useState('')
   const [found, setFound] = useState<Place[] | null>(null)
+  const [selectedBranches, setSelectedBranches] = useState<string[]>([])
+  const [mapsLink, setMapsLink] = useState('')
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState('')
   const [loaded, setLoaded] = useState(!itemId)
   const [existing, setExisting] = useState<Item | undefined>()
+  const activeListId = existing?.listId ?? listId
+  const list = useLiveQuery(() => activeListId ? db.lists.get(activeListId) : undefined, [activeListId])
 
   // load when editing
   useEffect(() => {
@@ -51,32 +55,55 @@ export function ItemEditor({ listId, itemId, onClose }: { listId: string; itemId
   function onPick(p: Place) {
     setMsg('')
     if (!places.some(x => x.id === p.id)) setPlaces(prev => [...prev, p])
-    setPending(p)
-    setBrandName(p.name)
-    setFound(null)
   }
 
-  async function findBranches() {
-    if (!pending || !brandName.trim()) return
+  async function importMapsLink() {
+    if (!mapsLink.trim()) return
     setBusy(true); setMsg('')
     try {
-      const res = await searchBranches(brandName, { lat: pending.lat, lng: pending.lng })
-      setFound(res)
-      if (res.length < 2) setMsg(`Only ${res.length} match for "${brandName.trim()}". Try the chain's name on its own, e.g. "Muji".`)
-    } catch {
-      setMsg('Branch search needs a connection.')
+      const place = await resolveMapsLink(mapsLink)
+      setPlaces(prev => prev.some(p => p.id === place.id) ? prev : [...prev, place])
+      setMapsLink('')
+      setMsg(`Added ${place.name}.`)
+    } catch (e) {
+      setMsg(e instanceof Error ? e.message : 'Could not import that Google Maps link.')
     } finally {
       setBusy(false)
     }
   }
 
-  function useAnyBranch() {
-    if (!pending || !found) return
-    const brand: Brand = { id: `brand:${slug(brandName)}`, name: brandName.trim(), fetchedAt: Date.now() }
-    const branches = found.map(p => ({ ...p, brandId: brand.id }))
-    setPlaces(prev => prev.map(p => (p.id === pending.id ? { ...p, brandId: brand.id } : p)))
-    setScopes(prev => [...prev.filter(s => s.brand.id !== brand.id), { brand, branches }])
-    setPending(null); setFound(null)
+  async function findBranches() {
+    if (!chainName.trim()) return
+    setBusy(true); setMsg(''); setFound(null); setSelectedBranches([])
+    try {
+      const res = await searchBranches(chainName, list?.home ?? pos ?? undefined)
+      setFound(res)
+      setSelectedBranches([])
+      if (res.length === 0) setMsg(`No results found for "${chainName.trim()}". Try another spelling.`)
+    } catch {
+      setMsg('Could not search Google Maps. Check that Places API (New) is enabled and the API key allows this site.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  function addSelectedBranches() {
+    if (!found || selectedBranches.length === 0) return
+    const name = chainName.trim()
+    const brand: Brand = { id: `brand:${slug(name)}`, name, fetchedAt: Date.now() }
+    const branches = found
+      .filter(place => selectedBranches.includes(place.id))
+      .map(place => ({ ...place, brandId: brand.id }))
+    setScopes(prev => {
+      const existingScope = prev.find(scope => scope.brand.id === brand.id)
+      const merged = new Map((existingScope?.branches ?? []).map(place => [place.id, place]))
+      for (const branch of branches) merged.set(branch.id, branch)
+      return [...prev.filter(scope => scope.brand.id !== brand.id), { brand, branches: [...merged.values()] }]
+    })
+    setChainName('')
+    setFound(null)
+    setSelectedBranches([])
+    setMsg(`Added ${branches.length} ${name} ${branches.length === 1 ? 'branch' : 'branches'}.`)
   }
 
   async function save() {
@@ -154,31 +181,45 @@ export function ItemEditor({ listId, itemId, onClose }: { listId: string; itemId
           </div>
         ))}
 
-        <PlacePicker near={pos} onPick={onPick} />
+        <p className="note">Add a specific shop, import a Maps link, or search for a chain directly.</p>
+        <PlacePicker near={list?.home ?? pos} onPick={onPick} />
 
-        {pending && (
-          <div className="found sk">
-            <span className="tape" />
-            <p>Is <b>{pending.name}</b> part of a chain?</p>
-            <div className="field sk fine small">
-              <input value={brandName} onChange={e => setBrandName(e.target.value)} aria-label="Chain name" placeholder="Chain name, e.g. Muji" />
+        <form className="maps-link-import" onSubmit={e => { e.preventDefault(); void importMapsLink() }}>
+          <label className="field sk fine">
+            <input value={mapsLink} onChange={e => setMapsLink(e.target.value)} aria-label="Google Maps link" placeholder="Paste a Google Maps link" type="url" />
+          </label>
+          <button type="submit" className="sk fine" disabled={busy || !mapsLink.trim()}>Import place</button>
+        </form>
+
+        <section className="chain-search">
+          <h4 className="hand">Search for a chain</h4>
+          <form onSubmit={e => { e.preventDefault(); void findBranches() }}>
+            <label className="field sk fine small">
+              <input value={chainName} onChange={e => setChainName(e.target.value)} aria-label="Chain name" placeholder="Chain name, e.g. Muji" />
+            </label>
+            <button type="submit" className="sk fine" disabled={busy || !chainName.trim()}>{busy ? 'Searching…' : 'Search branches'}</button>
+          </form>
+          {found && found.length > 0 && (
+            <div className="branch-results">
+              <p className="note">Choose the branches to include in this trip.</p>
+              {found.map(place => (
+                <label className="branch-option" key={place.id}>
+                  <input
+                    type="checkbox"
+                    checked={selectedBranches.includes(place.id)}
+                    onChange={() => setSelectedBranches(current => current.includes(place.id)
+                      ? current.filter(id => id !== place.id)
+                      : [...current, place.id])}
+                  />
+                  <span><b>{place.name}</b>{place.address && <small>{place.address}</small>}</span>
+                </label>
+              ))}
+              <button type="button" className="sk fine" disabled={selectedBranches.length === 0} onClick={addSelectedBranches}>
+                Add {selectedBranches.length || ''} selected {selectedBranches.length === 1 ? 'branch' : 'branches'}
+              </button>
             </div>
-            {found === null ? (
-              <div className="seg">
-                <button type="button" className="sk fine" onClick={() => setPending(null)}>Just this one</button>
-                <button type="button" className="sk fine" onClick={findBranches} disabled={busy}>{busy ? 'Looking…' : 'Find branches'}</button>
-              </div>
-            ) : (
-              <>
-                <p className="preview">Found <strong>{found.length}</strong> near here.</p>
-                <div className="seg">
-                  <button type="button" className="sk fine" onClick={() => { setPending(null); setFound(null) }}>This one only</button>
-                  <button type="button" className="sk fine" aria-pressed="true" onClick={useAnyBranch} disabled={found.length < 1}>Any branch · {found.length}</button>
-                </div>
-              </>
-            )}
-          </div>
-        )}
+          )}
+        </section>
 
         {msg && <p className="note warn">{msg}</p>}
         {existing && <button type="button" className="linkbtn" onClick={remove}>Delete this item</button>}

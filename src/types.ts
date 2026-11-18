@@ -5,7 +5,13 @@ export interface Stroke { c: string; p: [number, number][] }
 /** A drawn icon. `vb` is the bounding box of the strokes (x, y, w, h) so it scales cleanly at any size. */
 export interface Sketch { strokes: Stroke[]; vb: [number, number, number, number] }
 
-export interface List { id: string; name: string; createdAt: number }
+export interface List {
+  id: string
+  name: string
+  createdAt: number
+  home?: LatLng
+  homeName?: string
+}
 
 export interface Place {
   id: string            // Google place id (safe to store indefinitely)

@@ -64,8 +64,8 @@ export function Lists({ go }: { go: (h: string) => void }) {
       {lists === undefined ? null : lists.length === 0 ? (
         <div className="empty sk">
           <span className="tape" />
-          <p className="hand">Start with a list for your next trip.</p>
-          <p>Add things you want to buy, then pin the shops that sell them.</p>
+          <p className="hand">Start with a list for your next trip :3</p>
+          <p>Add things you want to buy, then pin the shops where you can find them</p>
         </div>
       ) : (
         <ul className="folders">
@@ -89,7 +89,7 @@ export function Lists({ go }: { go: (h: string) => void }) {
       </form>
 
       <div className="backup">
-        <p>Your lists live only on this device. Back them up now and then.</p>
+        <p>Your lists live only on this device (beta...). Back them up now and then!</p>
         <div className="seg">
           <button className="sk fine" onClick={doExport}>Export backup</button>
           <button className="sk fine" onClick={() => file.current?.click()}>Import backup</button>

@@ -97,5 +97,12 @@ export function storeLabel(item: Item, idx: Index): { name: string; extra?: stri
 }
 
 export function navUrl(p: Place, mode: 'walking' | 'transit' | 'driving'): string {
-  return `https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lng}&destination_place_id=${encodeURIComponent(p.id)}&travelmode=${mode}`
+  const placeId = p.id.startsWith('pin:') ? '' : `&destination_place_id=${encodeURIComponent(p.id)}`
+  return `https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lng}${placeId}&travelmode=${mode}`
+}
+
+export function mapsPlaceUrl(p: Place): string {
+  const query = p.id.startsWith('pin:') ? `${p.lat},${p.lng}` : p.name
+  const placeId = p.id.startsWith('pin:') ? '' : `&query_place_id=${encodeURIComponent(p.id)}`
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}${placeId}`
 }

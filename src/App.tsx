@@ -33,7 +33,7 @@ export default function App() {
     <GeoContext.Provider value={geo}>
       <Sprite />
       {!MAPS_KEY && (
-        <div className="banner">No Google Maps key found. Lists work, but search and maps are off. Add <code>VITE_GOOGLE_MAPS_API_KEY</code> to <code>.env</code>.</div>
+        <div className="banner">For Vivian: No Google Maps key found. Lists work, but search and maps are off. Add <code>VITE_GOOGLE_MAPS_API_KEY</code> to <code>.env</code>.</div>
       )}
       {view}
       {editor && <ItemEditor listId={editor.listId} itemId={editor.itemId} onClose={() => setEditor(null)} />}
