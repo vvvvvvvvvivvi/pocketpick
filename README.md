@@ -1,4 +1,6 @@
-# Pocket Pin
+# Pocket Pick!
+
+related repo: https://github.com/vvvvvvvvvivvi/pocketpick-expansion/ https://pocketpick-expansion.vercel.app
 
 A georeferenced shopping list. Add things you want to buy, pin the shops that sell them, and when you're out it tells you which shop is closest and hands you to Google Maps for directions.
 
