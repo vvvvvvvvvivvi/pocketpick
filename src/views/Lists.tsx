@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { db, exportAll, importAll, uid } from '../db'
+import { db, exportAll, importAll, importTripCsv, uid } from '../db'
+import { resolveMapsLink } from '../gmaps'
 import { useGeo } from '../geo'
 import { Icon } from '../components/Sprite'
 import { download } from '../download'
@@ -38,8 +39,18 @@ export function Lists({ go }: { go: (h: string) => void }) {
   async function doImport(f: File | undefined) {
     if (!f) return
     try {
-      const r = await importAll(await f.text())
-      setNote(`Imported ${r.lists} lists and ${r.items} items.`)
+      const text = await f.text()
+      // A full backup is JSON; anything else is treated as a trip CSV from "Export trip CSV".
+      if (/\.json$/i.test(f.name) || text.replace(/^\uFEFF/, '').trimStart().startsWith('{')) {
+        const r = await importAll(text)
+        setNote(`Imported ${r.lists} lists and ${r.items} items.`)
+        return
+      }
+      setNote('Importing trip CSV…')
+      const r = await importTripCsv(text, resolveMapsLink)
+      const head = `Imported ${r.lists} ${r.lists === 1 ? 'trip' : 'trips'}, ${r.items} items and ${r.places} places.`
+      const more = r.problems.length > 3 ? ` (+${r.problems.length - 3} more)` : ''
+      setNote(r.problems.length ? `${head} Not everything came back: ${r.problems.slice(0, 3).join(' ')}${more}` : head)
     } catch (e) {
       setNote(e instanceof Error ? e.message : 'Import failed.')
     }
@@ -90,7 +101,7 @@ export function Lists({ go }: { go: (h: string) => void }) {
           <button className="sk fine" onClick={doExport}>Export backup</button>
           <button className="sk fine" onClick={() => file.current?.click()}>Import backup</button>
         </div>
-        <input ref={file} type="file" accept="application/json" hidden onChange={e => { doImport(e.target.files?.[0]); e.target.value = '' }} />
+        <input ref={file} type="file" accept=".json,application/json,.csv,text/csv" hidden onChange={e => { doImport(e.target.files?.[0]); e.target.value = '' }} />
         {note && <p className="note">{note}</p>}
       </div>
     </div>

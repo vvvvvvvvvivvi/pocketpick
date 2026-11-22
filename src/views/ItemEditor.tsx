@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { db, uid } from '../db'
+import { brandIdFor, db, uid } from '../db'
 import { fmtDist, haversine, useGeo } from '../geo'
 import { resolveMapsLink, searchBranches } from '../gmaps'
 import { Icon } from '../components/Sprite'
@@ -10,7 +10,6 @@ import type { Brand, Item, Place, Sketch, Tag } from '../types'
 
 interface BrandScope { brand: Brand; branches: Place[] }
 
-const slug = (s: string) => s.trim().toLowerCase().replace(/\s+/g, '-')
 
 export function ItemEditor({ listId, itemId, onClose }: { listId: string; itemId?: string; onClose: () => void }) {
   const { pos } = useGeo()
@@ -90,7 +89,7 @@ export function ItemEditor({ listId, itemId, onClose }: { listId: string; itemId
   function addSelectedBranches() {
     if (!found || selectedBranches.length === 0) return
     const name = chainName.trim()
-    const brand: Brand = { id: `brand:${slug(name)}`, name, fetchedAt: Date.now() }
+    const brand: Brand = { id: brandIdFor(name), name, fetchedAt: Date.now() }
     const branches = found
       .filter(place => selectedBranches.includes(place.id))
       .map(place => ({ ...place, brandId: brand.id }))

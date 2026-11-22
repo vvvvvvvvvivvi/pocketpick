@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "test": "&& node --experimental-strip-types --no-warnings tests/mymaps.test.ts && node --experimental-strip-types --no-warnings tests/searchCache.test.ts"
+    "test": "node --experimental-strip-types --no-warnings tests/geo.test.ts && node --experimental-strip-types --no-warnings tests/db.test.ts && node --experimental-strip-types --no-warnings tests/mymaps.test.ts && node --experimental-strip-types --no-warnings tests/searchCache.test.ts"
   },
   "dependencies": {
     "dexie": "^4.4.7",
