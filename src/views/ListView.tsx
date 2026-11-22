@@ -1,17 +1,16 @@
 import { useMemo, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db, deleteList, exportListCsv, uid } from '../db'
-import { buildIndex, candidates, fmtDist, storeLabel, useGeo, walkMins } from '../geo'
+import { buildIndex, candidates, fmtDist, haversine, storeLabel, useGeo, walkMins } from '../geo'
 import { resolveMapsLink } from '../gmaps'
 import { Icon } from '../components/Sprite'
 import { MapView } from '../components/MapView'
 import { PlacePicker } from '../components/PlacePicker'
-import { SketchIcon } from '../components/Sketch'
+import { SketchIcon, sketchSvg } from '../components/Sketch'
 import type { Item, Place } from '../types'
 
 type Filter = 'all' | 'food' | 'things'
 const WALK_M = 800 // roughly a 10 minute walk
-const ignorePlaceSelection = () => {}
 
 export function ListView({ listId, go, edit }: { listId: string; go: (h: string) => void; edit: (itemId?: string) => void }) {
   const { pos, status } = useGeo()
@@ -39,14 +38,43 @@ export function ListView({ listId, go, edit }: { listId: string; go: (h: string)
       return da !== dbb ? da - dbb : a.item.createdAt - b.item.createdAt
     })
   }, [items, idx, pos])
-  const mapPlaces = useMemo(() => {
-    if (!items || !idx) return []
-    const saved = new Map<string, Place>()
+  // Trip map: one stop per shop, with the items you can get there (things still to buy first).
+  const stops = useMemo(() => {
+    if (!items || !idx) return new Map<string, { place: Place; items: Item[] }>()
+    const byPlace = new Map<string, { place: Place; items: Item[] }>()
     for (const item of items) {
-      for (const candidate of candidates(item, idx, null)) saved.set(candidate.place.id, candidate.place)
+      for (const { place } of candidates(item, idx, null)) {
+        const stop = byPlace.get(place.id) ?? { place, items: [] }
+        stop.items.push(item)
+        byPlace.set(place.id, stop)
+      }
     }
-    return [...saved.values()].sort((a, b) => a.name.localeCompare(b.name))
+    for (const stop of byPlace.values()) stop.items.sort((a, b) => Number(a.done) - Number(b.done) || a.createdAt - b.createdAt)
+    return byPlace
   }, [items, idx])
+  const mapPlaces = useMemo(() => [...stops.values()].map(s => s.place).sort((a, b) => a.name.localeCompare(b.name)), [stops])
+  const [stopId, setStopId] = useState<string | undefined>()
+  const stop = stopId ? stops.get(stopId) : undefined
+
+  // Pin = the drawn icon of the first thing to buy there, plus "+n" when the shop covers more items.
+  const stopPin = (place: Place) => {
+    const el = document.createElement('div')
+    const s = stops.get(place.id)
+    if (!s) return el
+    const open = s.items.filter(i => !i.done)
+    const first = open[0] ?? s.items[0]
+    el.className = 'gstop' + (open.length ? '' : ' done')
+    el.setAttribute('aria-label', `${place.name}: ${s.items.map(i => i.title).join(', ')}`)
+    el.title = place.name
+    el.append(sketchSvg(first.sketch, first.tag))
+    const extra = (open.length || s.items.length) - 1
+    if (extra > 0) {
+      const badge = document.createElement('b')
+      badge.textContent = `+${extra}`
+      el.append(badge)
+    }
+    return el
+  }
 
   if (list === undefined || items === undefined) return null
   if (!list) return <div className="page"><p className="note">That list no longer exists...</p><a href="#/" className="linkbtn">Back to lists</a></div>
@@ -180,10 +208,31 @@ export function ListView({ listId, go, edit }: { listId: string; go: (h: string)
               center={list.home ?? null}
               home={list.home ?? null}
               showAll
-              onSelect={ignorePlaceSelection}
+              selectedId={stop?.place.id}
+              onSelect={id => setStopId(current => (current === id ? undefined : id))}
+              pin={stopPin}
               onMapClick={droppingHome ? location => void setHome(location, 'Dropped pin') : undefined}
             />
           </div>
+          {stop ? (
+            <div className="stop-card sk fine">
+              <div className="stop-head">
+                <b>{stop.place.name}</b>
+                {(pos ?? list.home) && <small>{fmtDist(haversine((pos ?? list.home)!, stop.place))} from {pos ? 'you' : 'Home'}</small>}
+                <button type="button" className="mini-x" aria-label="Close shop details" onClick={() => setStopId(undefined)}><Icon name="x" size={16} /></button>
+              </div>
+              <ul className="stop-items">
+                {stop.items.map(i => (
+                  <li key={i.id} className={i.done ? 'done' : ''}>
+                    <a href={`#/item/${i.id}`}>
+                      <span className="ico sk fine"><SketchIcon sketch={i.sketch} fallback={i.tag} /></span>
+                      <span>{i.title}</span>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : mapPlaces.length > 0 && <p className="note">Tap a pin to see the shop and what to get there.</p>}
           <div className="map-tools">
             <button className="sk fine" aria-pressed={droppingHome} onClick={() => { setDroppingHome(value => !value); setSearchingHome(false) }}>
               {droppingHome ? 'Cancel pin drop' : 'Drop Home pin'}

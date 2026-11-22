@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { brandIdFor, db, uid } from '../db'
 import { fmtDist, haversine, useGeo } from '../geo'
@@ -29,12 +29,15 @@ export function ItemEditor({ listId, itemId, onClose }: { listId: string; itemId
   const activeListId = existing?.listId ?? listId
   const list = useLiveQuery(() => activeListId ? db.lists.get(activeListId) : undefined, [activeListId])
 
-  // load when editing
+  // Load once per item. onClose is read through a ref: App passes a new function on every render
+  // (e.g. each GPS update), and re-running this would wipe unsaved edits such as a new sketch.
+  const closeRef = useRef(onClose)
+  closeRef.current = onClose
   useEffect(() => {
     if (!itemId) return
     ;(async () => {
       const it = await db.items.get(itemId)
-      if (!it) { onClose(); return }
+      if (!it) { closeRef.current(); return }
       setExisting(it)
       setTitle(it.title)
       setTag(it.tag)
@@ -49,7 +52,7 @@ export function ItemEditor({ listId, itemId, onClose }: { listId: string; itemId
       setScopes(sc)
       setLoaded(true)
     })()
-  }, [itemId, onClose])
+  }, [itemId])
 
   function onPick(p: Place) {
     setMsg('')

@@ -141,6 +141,23 @@ code{font-family:ui-monospace,monospace;font-size:.85em;background:rgba(31,59,52
 .gme{width:18px;height:18px;border-radius:50%;background:#4f86c6;border:3px solid #fff;box-shadow:0 0 0 7px rgba(79,134,198,.3)}
 .ghome{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:var(--mustard);border:2.5px solid var(--ink);font-family:'Caveat Brush',cursive;font-size:18px;color:var(--ink)}
 .trip-map-section{margin-bottom:18px}
+/* trip map: pins show the item's drawn icon */
+.gpin.gstop{position:relative;width:40px;height:40px;transition:transform .15s}
+.gstop svg{width:28px;height:28px}
+.gstop svg.fallback{width:22px;height:22px;color:var(--soft)}
+.gstop b{position:absolute;top:-8px;right:-10px;min-width:22px;height:20px;padding:0 5px;border-radius:10px;background:var(--mustard);border:2px solid var(--ink);font:400 14px/16px 'Patrick Hand',cursive;color:var(--ink);text-align:center}
+.gstop.done{opacity:.45}
+.gpin.gstop.sel{background:#fff;border-color:var(--red);border-width:3.5px;transform:scale(1.25)}
+.stop-card{margin:10px 0 4px;padding:10px 12px;--bg:#fff}
+.stop-head{display:flex;align-items:baseline;gap:8px}
+.stop-head b{flex:1;min-width:0;font-size:19px;font-weight:400;overflow-wrap:anywhere}
+.stop-head small{font-size:14px;color:var(--soft);white-space:nowrap}
+.stop-items{list-style:none;display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.stop-items a{display:flex;align-items:center;gap:6px;font-size:16px}
+.stop-items .ico{width:32px;height:32px}
+.stop-items .ico svg{width:24px;height:24px}
+.stop-items .done span:last-child{text-decoration:line-through;color:var(--soft)}
+.stop-items .done .ico{opacity:.45}
 .list-mapcard{height:290px}
 .map-tools{display:flex;flex-wrap:wrap;gap:8px;margin:9px 2px}
 .map-tools button,.maps-link-import>button,.chain-search form>button,.branch-results>button{padding:7px 12px;--bg:#fff}

@@ -49,6 +49,34 @@ export function SketchIcon({ sketch, fallback }: { sketch?: Sketch; fallback: 'f
   )
 }
 
+/** Same drawing as SketchIcon, built as a plain DOM element for places React does not render (Google map pins). */
+export function sketchSvg(sketch: Sketch | undefined, fallback: 'food' | 'things'): SVGSVGElement {
+  const ns = 'http://www.w3.org/2000/svg'
+  const svg = document.createElementNS(ns, 'svg')
+  svg.setAttribute('aria-hidden', 'true')
+  if (!sketch) {
+    svg.setAttribute('class', 'ic fallback')
+    const use = document.createElementNS(ns, 'use')
+    use.setAttribute('href', fallback === 'food' ? '#i-leaf' : '#i-bag')
+    svg.append(use)
+    return svg
+  }
+  svg.setAttribute('class', 'sketch-icon')
+  svg.setAttribute('viewBox', sketch.vb.join(' '))
+  for (const s of sketch.strokes) {
+    const path = document.createElementNS(ns, 'path')
+    path.setAttribute('d', smooth(s.p))
+    path.setAttribute('stroke', s.c)
+    path.setAttribute('fill', 'none')
+    path.setAttribute('stroke-width', '2.6')
+    path.setAttribute('stroke-linecap', 'round')
+    path.setAttribute('stroke-linejoin', 'round')
+    path.setAttribute('vector-effect', 'non-scaling-stroke')
+    svg.append(path)
+  }
+  return svg
+}
+
 export function SketchPad({ value, onChange }: { value?: Sketch; onChange: (s: Sketch | undefined) => void }) {
   const cv = useRef<HTMLCanvasElement>(null)
   const strokes = useRef<Stroke[]>(value?.strokes ?? [])

@@ -11,11 +11,13 @@ interface Props {
   home?: LatLng | null
   showAll?: boolean
   onMapClick?: (location: LatLng) => void
+  /** Custom pin content. Without it, pins show their number (index + 1). */
+  pin?: (place: Place) => HTMLElement
 }
 
 const MAX_PINS = 8
 
-export function MapView({ me, places, selectedId, onSelect, center, home, showAll, onMapClick }: Props) {
+export function MapView({ me, places, selectedId, onSelect, center, home, showAll, onMapClick, pin }: Props) {
   const host = useRef<HTMLDivElement>(null)
   const map = useRef<google.maps.Map | null>(null)
   const markers = useRef<google.maps.marker.AdvancedMarkerElement[]>([])
@@ -27,6 +29,9 @@ export function MapView({ me, places, selectedId, onSelect, center, home, showAl
   selectRef.current = onSelect
   const mapClickRef = useRef(onMapClick)
   mapClickRef.current = onMapClick
+  const pinRef = useRef(pin)
+  pinRef.current = pin
+  const lastFit = useRef('')
 
   // create the map once
   useEffect(() => {
@@ -70,10 +75,11 @@ export function MapView({ me, places, selectedId, onSelect, center, home, showAl
       const bounds = new google.maps.LatLngBounds()
       const visiblePlaces = showAll ? places : places.slice(0, MAX_PINS)
       visiblePlaces.forEach((p, i) => {
-        const el = document.createElement('div')
-        el.className = 'gpin' + (p.id === selectedId ? ' sel' : '')
-        el.textContent = String(i + 1)
-        el.title = p.name
+        const custom = pinRef.current?.(p)
+        const el = custom ?? document.createElement('div')
+        el.classList.add('gpin')
+        if (p.id === selectedId) el.classList.add('sel')
+        if (!custom) { el.textContent = String(i + 1); el.title = p.name }
         el.addEventListener('click', () => selectRef.current(p.id))
         const m = new AdvancedMarkerElement({ map: map.current!, position: { lat: p.lat, lng: p.lng }, content: el, zIndex: p.id === selectedId ? 10 : 1 })
         markers.current.push(m)
@@ -92,6 +98,10 @@ export function MapView({ me, places, selectedId, onSelect, center, home, showAl
         pin.title = 'Home'
         homeMarker.current = new AdvancedMarkerElement({ map: map.current!, position: home, content: pin, zIndex: 30 })
       }
+      // On the trip map (showAll), tapping a pin only changes selectedId: keep the view where the user left it.
+      const fitKey = JSON.stringify([visiblePlaces.map(p => p.id), me, center, home])
+      if (showAll && fitKey === lastFit.current) return
+      lastFit.current = fitKey
       if (center) {
         map.current!.setCenter(center)
         map.current!.setZoom(13)
