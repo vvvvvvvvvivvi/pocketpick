@@ -44,7 +44,7 @@ export function MapView({ me, places, selectedId, onSelect, center, home, showAl
           gestureHandling: 'greedy',
           clickableIcons: false
         })
-        map.current.addListener('click', event => {
+        map.current.addListener('click', (event: google.maps.MapMouseEvent) => {
           if (event.latLng) mapClickRef.current?.({ lat: event.latLng.lat(), lng: event.latLng.lng() })
         })
         setReady(true)

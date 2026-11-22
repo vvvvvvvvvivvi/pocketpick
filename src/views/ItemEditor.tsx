@@ -6,7 +6,6 @@ import { resolveMapsLink, searchBranches } from '../gmaps'
 import { Icon } from '../components/Sprite'
 import { SketchPad } from '../components/Sketch'
 import { PlacePicker } from '../components/PlacePicker'
-import { readBranchCache, writeBranchCache } from '../searchCache'
 import type { Brand, Item, Place, Sketch, Tag } from '../types'
 
 interface BrandScope { brand: Brand; branches: Place[] }
@@ -77,16 +76,7 @@ export function ItemEditor({ listId, itemId, onClose }: { listId: string; itemId
     if (!chainName.trim()) return
     setBusy(true); setMsg(''); setFound(null); setSelectedBranches([])
     try {
-      const near = list?.home ?? pos ?? undefined
-      const cached = readBranchCache(chainName, near)
-      if (cached) {
-        // same chain, same area, within 30 days: no Google request
-        setFound(cached.places)
-        setMsg(`Showing saved results from ${new Date(cached.at).toLocaleDateString('en-GB')}. No new Google search was made.`)
-        return
-      }
-      const res = await searchBranches(chainName, near)
-      writeBranchCache(chainName, near, res)
+      const res = await searchBranches(chainName, list?.home ?? pos ?? undefined)
       setFound(res)
       setSelectedBranches([])
       if (res.length === 0) setMsg(`No results found for "${chainName.trim()}". Try another spelling.`)
@@ -192,7 +182,7 @@ export function ItemEditor({ listId, itemId, onClose }: { listId: string; itemId
         ))}
 
         <p className="note">Add a specific shop, import a Maps link, or search for a chain directly.</p>
-        <PlacePicker near={list?.home ?? pos} onPick={onPick} />
+        <PlacePicker key={list?.home ? `${list.home.lat},${list.home.lng}` : 'no-home'} near={list?.home ?? pos} onPick={onPick} />
 
         <form className="maps-link-import" onSubmit={e => { e.preventDefault(); void importMapsLink() }}>
           <label className="field sk fine">
