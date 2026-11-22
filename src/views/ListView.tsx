@@ -3,6 +3,8 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { db, deleteList, exportListCsv, uid } from '../db'
 import { buildIndex, candidates, fmtDist, storeLabel, useGeo, walkMins } from '../geo'
 import { resolveMapsLink } from '../gmaps'
+import { download } from '../download'
+import { buildRows, toKml } from '../mymaps'
 import { Icon } from '../components/Sprite'
 import { MapView } from '../components/MapView'
 import { PlacePicker } from '../components/PlacePicker'
@@ -106,6 +108,18 @@ export function ListView({ listId, go, edit }: { listId: string; go: (h: string)
     }
   }
 
+  /** KML for Google My Maps: each item becomes its own layer. Built from saved data, so it makes no Google request. */
+  function downloadKml() {
+    const rows = buildRows(list!.name, items!, item => (idx ? candidates(item, idx, null) : []))
+    if (!rows.length) {
+      setActionNote('None of the items have a store pinned yet.')
+      return
+    }
+    const safeName = list!.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'trip'
+    download(`${safeName}.kml`, toKml(list!.name, rows), 'application/vnd.google-earth.kml+xml')
+    setActionNote('KML downloaded. Import it at mymaps.google.com (Add layer → Import).')
+  }
+
   async function importMapsLinks() {
     const links = importText.split(/\r?\n/).map(link => link.trim()).filter(Boolean)
     if (!links.length) {
@@ -165,6 +179,7 @@ export function ListView({ listId, go, edit }: { listId: string; go: (h: string)
             <button onClick={() => setMapVisible(value => !value)}>{mapVisible ? 'Hide trip map' : 'Show trip map'}</button>
             <button onClick={() => { setImportOpen(true); setImportNote('') }}>Import Maps links</button>
             <button onClick={() => void downloadCsv()}>Export trip CSV</button>
+            <button onClick={downloadKml}>Export KML (My Maps)</button>
             <button onClick={remove}>Delete list</button>
           </div>
         </details>

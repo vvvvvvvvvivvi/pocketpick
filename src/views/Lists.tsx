@@ -3,6 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { db, exportAll, importAll, uid } from '../db'
 import { useGeo } from '../geo'
 import { Icon } from '../components/Sprite'
+import { download } from '../download'
 
 export function Lists({ go }: { go: (h: string) => void }) {
   const { status } = useGeo()
@@ -30,12 +31,7 @@ export function Lists({ go }: { go: (h: string) => void }) {
   }
 
   async function doExport() {
-    const blob = new Blob([await exportAll()], { type: 'application/json' })
-    const a = document.createElement('a')
-    a.href = URL.createObjectURL(blob)
-    a.download = `pocket-pin-${new Date().toISOString().slice(0, 10)}.json`
-    a.click()
-    URL.revokeObjectURL(a.href)
+    download(`pocket-pin-${new Date().toISOString().slice(0, 10)}.json`, await exportAll(), 'application/json')
     setNote('Backup saved to your downloads.')
   }
 
