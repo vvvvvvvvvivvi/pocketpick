@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db, uid } from '../db'
-import { useGeo } from '../geo'
+import { fmtDist, haversine, useGeo } from '../geo'
 import { resolveMapsLink, searchBranches } from '../gmaps'
 import { Icon } from '../components/Sprite'
 import { SketchPad } from '../components/Sketch'
@@ -139,6 +139,15 @@ export function ItemEditor({ listId, itemId, onClose }: { listId: string; itemId
 
   if (!loaded) return null
 
+  // Distance from Home (or from you, if the list has no Home). Calculated locally from coordinates we already have.
+  const ref = list?.home ?? pos
+  const refLabel = list?.home ? 'Home' : 'you'
+  const foundShown = found
+    ? found
+        .map(place => ({ place, dist: ref ? haversine(ref, place) : null }))
+        .sort((a, b) => (a.dist ?? 0) - (b.dist ?? 0))
+    : null
+
   return (
     <div className="sheet-back" role="dialog" aria-modal="true" aria-label={existing ? 'Edit item' : 'New item'}>
       <div className="sheet">
@@ -201,8 +210,8 @@ export function ItemEditor({ listId, itemId, onClose }: { listId: string; itemId
           </form>
           {found && found.length > 0 && (
             <div className="branch-results">
-              <p className="note">Choose the branches to include in this trip.</p>
-              {found.map(place => (
+              <p className="note">Choose the branches to include in this trip{ref ? ` (nearest ${refLabel} first)` : ''}.</p>
+              {foundShown!.map(({ place, dist }) => (
                 <label className="branch-option" key={place.id}>
                   <input
                     type="checkbox"
@@ -211,7 +220,7 @@ export function ItemEditor({ listId, itemId, onClose }: { listId: string; itemId
                       ? current.filter(id => id !== place.id)
                       : [...current, place.id])}
                   />
-                  <span><b>{place.name}</b>{place.address && <small>{place.address}</small>}</span>
+                  <span><b>{place.name}</b>{(dist != null || place.address) && <small>{[dist != null ? `${fmtDist(dist)} from ${refLabel}` : '', place.address].filter(Boolean).join(' · ')}</small>}</span>
                 </label>
               ))}
               <button type="button" className="sk fine" disabled={selectedBranches.length === 0} onClick={addSelectedBranches}>
