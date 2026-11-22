@@ -57,7 +57,24 @@ export async function searchBranches(brand: string, near?: LatLng): Promise<Plac
     .filter((p): p is Place => p !== null)
 }
 
-export async function resolveMapsLink(value: string): Promise<Place> {
+/** Base URL of the small "expand" function (see expand-proxy/). Optional: without it, short links are rejected as before. */
+const EXPAND_URL = import.meta.env.VITE_EXPAND_URL as string | undefined
+
+/** Turns a maps.app.goo.gl short link into the full Google Maps URL. Makes no Google Maps API call. */
+async function expandShortLink(value: string): Promise<string> {
+  if (!EXPAND_URL) throw new Error('Open the shortened link in Google Maps, then copy and paste the full Maps URL.')
+  let res: Response
+  try {
+    res = await fetch(`${EXPAND_URL}?url=${encodeURIComponent(value.trim())}`)
+  } catch {
+    throw new Error('Could not reach the link expander. Paste the full Google Maps URL instead.')
+  }
+  const data = await res.json().catch(() => null) as { url?: string; error?: string } | null
+  if (!res.ok || !data?.url) throw new Error(data?.error ?? 'Could not expand that short link. Paste the full Google Maps URL instead.')
+  return data.url
+}
+
+export async function resolveMapsLink(value: string, expanded = false): Promise<Place> {
   let url: URL
   try {
     url = new URL(value.trim())
@@ -70,7 +87,8 @@ export async function resolveMapsLink(value: string): Promise<Place> {
     throw new Error('Enter a link from Google Maps.')
   }
   if (host === 'maps.app.goo.gl' || host === 'goo.gl') {
-    throw new Error('Open the shortened link in Google Maps, then copy and paste the full Maps URL.')
+    if (expanded) throw new Error('That short link did not lead to a full Google Maps URL.')
+    return resolveMapsLink(await expandShortLink(value), true)
   }
 
   const query = url.searchParams.get('query')
